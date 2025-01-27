@@ -1,21 +1,48 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventarios de Pesticidas y Combustibles</title>
-    <!-- Enlazar el CSS de Bootstrap y DataTables -->
+    <title>Inventarios de Pesticidas, Combustibles y Semillas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet">
+    <style>
+        .table td, .table th {
+            vertical-align: middle;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+        .img-fluid {
+            max-height: 150px;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-4">
-        <h1 class="text-center mb-4">Inventarios de Fitosanitarios y Combustibles</h1>
+        <!-- Logo de la empresa -->
+        <div class="text-center mb-4">
+            <img src="{% static 'inventory/images/logo_maylukol.jpeg' %}" alt="Logo de Maylukol" class="img-fluid">
+        </div>
+
+        <h1 class="text-center mb-4">Inventario de Fitosanitarios, Combustibles y Semillas</h1>
+
+        <!-- Botones para agregar productos y transacciones -->
+        <div class="mb-4">
+            <a href="{% url 'create_pesticide' %}" class="btn btn-primary">Agregar Fitosanitario</a>
+            <a href="{% url 'create_fuel' %}" class="btn btn-primary">Agregar Combustible</a>
+            <a href="{% url 'create_seed' %}" class="btn btn-primary">Agregar Semilla</a>
+            <a href="{% url 'add_pesticide' %}" class="btn btn-secondary">Modificar Fitosanitario</a>
+            <a href="{% url 'add_fuel' %}" class="btn btn-secondary">Modificar Combustible</a>
+            <a href="{% url 'add_seed' %}" class="btn btn-secondary">Modificar Semilla</a>
+        </div>
 
         <!-- Subtotales y totales -->
         <h2>Totales</h2>
-        <p><strong>Total valor de Fitosanitarios (pesos):</strong> {{ total_value_pesticide_usd }}</p>
+        <p><strong>Total valor de Fitosanitarios (USD):</strong> {{ total_value_pesticide_usd }}</p>
         <p><strong>Total costo de Combustibles (pesos):</strong> {{ total_cost_fuel_usd }}</p>
+        <p><strong>Total valor de Semillas (USD):</strong> {{ total_value_seed_usd }}</p>
 
         <!-- Tabla de Pesticidas -->
         <div class="mt-4">
@@ -27,23 +54,27 @@
                             <th>ID</th>
                             <th>Producto</th>
                             <th>Categoría</th>
+                            <th>Principio Activo</th>
+                            <th>Concentración</th>
                             <th>Forma de Presentación</th>
                             <th>Cantidad Disponible</th>
-                            <th>Precio Unitario (pesos)</th>
+                            <th>Precio Unitario (USD)</th>
                             <th>Fecha de Vencimiento</th>
-                            <th>Subtotal (pesos)</th>
+                            <th>Subtotal (USD)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for pesticide, subtotal in pesticide_subtotals %}
                         <tr>
-                            <td>{{ pesticide.id_pesticide }}</td>
+                            <td>{{ pesticide.id_pesticide}}</td>
                             <td>{{ pesticide.name }}</td>
                             <td>{{ pesticide.category }}</td>
+                            <td>{{ pesticide.active_principle }}</td>
+                            <td>{{ pesticide.concentration }}</td>
                             <td>{{ pesticide.presentation }}</td>
                             <td>{{ pesticide.available_quantity }}</td>
                             <td>{{ pesticide.unit_price }}</td>
-                            <td>{{ pesticide.expiration_date }}</td>
+                            <td>{{ pesticide.expiration_date|date:"d/m/Y" }}</td>
                             <td>{{ subtotal }}</td>
                         </tr>
                         {% endfor %}
@@ -60,25 +91,25 @@
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
-                            <th>Producto</th>
-                            <th>Categoría</th>
-                            <th>Forma de Presentación</th>
-                            <th>Cantidad Disponible</th>
-                            <th>Precio Unitario (pesos)</th>
-                            <th>Fecha de Vencimiento</th>
-                            <th>Subtotal (pesos)</th>
+                            <th>Nombre</th>
+                            <th>Tipo combustible</th>
+                            <th>Proveedor</th>
+                            <th>Unidad de medida</th>
+                            <th>Precio Unitario (USD)</th>
+                            <th>Cantidad disponible</th>
+                            <th>Subtotal (USD)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for fuel, subtotal in fuel_subtotals %}
                         <tr>
-                            <td>{{ fuel.id_fuel }}</td>
-                            <td>{{ fuel.name_fuel }}</td>
-                            <td>{{ fuel.category }}</td>
-                            <td>{{ fuel.presentation }}</td>
-                            <td>{{ fuel.available_quantity }}</td>
+                            <td>{{ fuel.id_fuel}}</td>
+                            <td>{{ fuel.name }}</td>
+                            <td>{{ fuel.fuel_type }}</td>
+                            <td>{{ fuel.supplier }}</td>
+                            <td>{{ fuel.unit_of_measurement }}</td>
                             <td>{{ fuel.unit_price }}</td>
-                            <td>{{ fuel.expiration_date }}</td>
+                            <td>{{ fuel.available_quantity }}</td>
                             <td>{{ subtotal }}</td>
                         </tr>
                         {% endfor %}
@@ -87,24 +118,49 @@
             </div>
         </div>
 
-        <!-- Botones para crear y agregar productos -->
-        <div class="mt-4 d-flex flex-column flex-sm-row">
-            <a href="{% url 'create_pesticide' %}" class="btn btn-primary mb-2 mb-sm-0 me-sm-2">Crear fitosanitario</a>
-            <a href="{% url 'create_fuel' %}" class="btn btn-primary mb-2 mb-sm-0 me-sm-2">Crear combustible/lubricante</a>
-            <a href="{% url 'add_pesticide' %}" class="btn btn-success mb-2 mb-sm-0 me-sm-2">Agregar fitosanitario</a>
-            <a href="{% url 'add_fuel' %}" class="btn btn-success mb-2 mb-sm-0">Agregar combustible/lubricante</a>
+        <!-- Tabla de Semillas -->
+        <div class="mt-4">
+            <h3>Semillas</h3>
+            <div class="table-responsive">
+                <table id="seed-table" class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Tipo de semilla</th>
+                            <th>Presentación</th>
+                            <th>Cantidad Disponible</th>
+                            <th>Precio Unitario (USD)</th>
+                            <th>Fecha de Vencimiento</th>
+                            <th>Subtotal (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seed, subtotal in seed_subtotals %}
+                        <tr>
+                            <td>{{ seed.id_seed }}</td>
+                            <td>{{ seed.name }}</td>
+                            <td>{{ seed.seed_type }}</td>
+                            <td>{{ seed.presentation }}</td>
+                            <td>{{ seed.available_quantity }}</td>
+                            <td>{{ seed.unit_price }}</td>
+                            <td>{{ seed.expiration_date|date:"d/m/Y" }}</td>
+                            <td>{{ subtotal }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     </div>
 
-    <!-- Enlazar los JS de Bootstrap y DataTables -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
         $(document).ready(function() {
-            // Inicializar DataTables con la funcionalidad de filtro y paginación
-            $('#pesticide-table, #fuel-table').DataTable({
+            $('#pesticide-table, #fuel-table, #seed-table').DataTable({
                 "searching": true,
                 "paging": true,
                 "info": true,

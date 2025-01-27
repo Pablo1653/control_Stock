@@ -1,84 +1,123 @@
 from django.db import models
 
-# Model for Pesticides
+# Modelo para los pesticidas
 class Pesticide(models.Model):
-    id_pesticide = models.AutoField(primary_key=True, verbose_name="Pesticide ID")  # Custom ID
-    name = models.CharField(max_length=200, verbose_name="Pesticide Name")
-    category = models.CharField(max_length=100, verbose_name="Category")
-    unit_of_measurement = models.CharField(max_length=50, verbose_name="Unit of Measurement")
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Unit Price")
-    expiration_date = models.DateField(verbose_name="Expiration Date")
-    available_quantity = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="Available Quantity"
+    id_pesticide = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=200)
+    category = models.CharField(max_length=200)
+    unit_of_measurement = models.CharField(max_length=100)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    expiration_date = models.DateField()
+    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    presentation = models.CharField(max_length=100)
+    active_principle = models.CharField(
+        max_length=100,
+        blank=False,  # No puede estar vacío
+        null=False    # No puede ser nulo en la base de datos
     )
-    presentation = models.CharField(
-        max_length=100, verbose_name="Presentation", blank=True, null=True
-    )  # Updated field name
-
-    class Meta:
-        verbose_name = "Pesticide"
-        verbose_name_plural = "Pesticides"
+    concentration = models.CharField(
+        max_length=255,
+        blank=False,  # No puede estar vacío
+        null=False,   # No puede ser nulo
+        default=""    # Valor por defecto vacío
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} ({self.category})"
+        return self.name
 
-# Model for Fuels
+# Modelo para los combustibles
 class Fuel(models.Model):
-    id_fuel = models.AutoField(primary_key=True, verbose_name="Fuel ID")  # Custom ID
-    name_fuel = models.CharField(max_length=200, verbose_name="Fuel Name")
-    category = models.CharField(max_length=100, verbose_name="Category")
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Unit Price")
-    expiration_date = models.DateField(verbose_name="Expiration Date")
-    available_quantity = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="Available Quantity"
-    )
-    presentation = models.CharField(
-        max_length=100, verbose_name="Presentation", blank=True, null=True
-    )  # Updated field name
-
-    class Meta:
-        verbose_name = "Fuel"
-        verbose_name_plural = "Fuels"
+    id_fuel = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=200)
+    unit_of_measurement = models.CharField(max_length=100)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    supplier = models.CharField(max_length=200)
+    fuel_type = models.CharField(max_length=100, default='')
+    presentation = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name_fuel} ({self.category})"
+        return self.name
 
-# Model for Pesticide Transactions
+# Modelo para las semillas
+class Seed(models.Model):
+    id_seed = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    category = models.CharField(max_length=255)
+    seed_type = models.CharField(max_length=255)
+    presentation = models.CharField(max_length=255)
+    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    expiration_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+# Modelo para las transacciones de pesticidas
 class PesticideTransaction(models.Model):
-    pesticide = models.ForeignKey(
-        Pesticide, on_delete=models.CASCADE, related_name="transactions", verbose_name="Pesticide"
-    )
-    quantity_in = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Quantity In"
-    )
-    quantity_out = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Quantity Out"
-    )
-    transaction_date = models.DateField(auto_now_add=True, verbose_name="Transaction Date")
+    id_pesticide_transaction = models.AutoField(primary_key=True)
+    pesticide = models.ForeignKey(Pesticide, on_delete=models.CASCADE)
+    quantity_in = models.PositiveIntegerField(default=0)  # Cantidad que entra (entrada)
+    quantity_out = models.PositiveIntegerField(default=0)  # Cantidad que sale (salida)
+    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación automática
+    updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        verbose_name = "Pesticide Transaction"
-        verbose_name_plural = "Pesticide Transactions"
+    def save(self, *args, **kwargs):
+        # Actualizar cantidad disponible al guardar la transacción
+        if self.quantity_in > 0:
+            self.pesticide.available_quantity += self.quantity_in
+        elif self.quantity_out > 0:
+            self.pesticide.available_quantity -= self.quantity_out
+        self.pesticide.save()  # Guardar la actualización en el producto
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.pesticide.name} - {self.transaction_date}"
+        return f'Transacción de {self.pesticide.name}'
 
-# Model for Fuel Transactions
+# Modelo para las transacciones de combustible
 class FuelTransaction(models.Model):
-    fuel = models.ForeignKey(
-        Fuel, on_delete=models.CASCADE, related_name="transactions", verbose_name="Fuel"
-    )
-    quantity_in = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Quantity In"
-    )
-    quantity_out = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Quantity Out"
-    )
-    transaction_date = models.DateField(auto_now_add=True, verbose_name="Transaction Date")
+    id_fuel_transaction = models.AutoField(primary_key=True)
+    fuel = models.ForeignKey(Fuel, on_delete=models.CASCADE)
+    quantity_in = models.PositiveIntegerField(default=0)  # Cantidad que entra (entrada)
+    quantity_out = models.PositiveIntegerField(default=0)  # Cantidad que sale (salida)
+    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación automática
+    updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        verbose_name = "Fuel Transaction"
-        verbose_name_plural = "Fuel Transactions"
+    def save(self, *args, **kwargs):
+        # Actualizar cantidad disponible al guardar la transacción
+        if self.quantity_in > 0:
+            self.fuel.available_quantity += self.quantity_in
+        elif self.quantity_out > 0:
+            self.fuel.available_quantity -= self.quantity_out
+        self.fuel.save()  # Guardar la actualización en el producto
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.fuel.name_fuel} - {self.transaction_date}"
+        return f'Transacción de {self.fuel.name}'
+
+# Modelo para las transacciones de semillas
+class SeedTransaction(models.Model):
+    id_seed_transaction = models.AutoField(primary_key=True)
+    seed = models.ForeignKey(Seed, on_delete=models.CASCADE)
+    quantity_in = models.PositiveIntegerField(default=0)  # Cantidad que entra (entrada)
+    quantity_out = models.PositiveIntegerField(default=0)  # Cantidad que sale (salida)
+    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación automática
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        # Actualizar cantidad disponible al guardar la transacción
+        if self.quantity_in > 0:
+            self.seed.available_quantity += self.quantity_in
+        elif self.quantity_out > 0:
+            self.seed.available_quantity -= self.quantity_out
+        self.seed.save()  # Guardar la actualización en el producto
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Transacción de {self.seed.name}'
