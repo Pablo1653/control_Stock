@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-&zwy*s85*yp999es_5dpr=4msa$t%mmyuh^l6ahrl=5p!^e*@u
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -77,15 +77,12 @@ WSGI_APPLICATION = 'inventory_control.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'inventory_db',  # Use the name of your PostgreSQL database
-        'USER': 'postgres',  # Your PostgreSQL username
-        'PASSWORD': 'Balles1653',  # Your PostgreSQL password
-        'HOST': '127.0.0.1',  # Or the IP of the PostgreSQL server
-        'PORT': '5432',  # Default port for PostgreSQL
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
 
 
 # Password validation
