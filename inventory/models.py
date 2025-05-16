@@ -1,122 +1,134 @@
 from django.db import models
+from django.core.exceptions import ValidationError
+
+# Modelo abstracto base para productos
+class Product(models.Model):
+    name = models.CharField(max_length=255)
+    unit_of_measurement = models.CharField(max_length=100)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    presentation = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.name
+
+    def update_stock(self, quantity_in=0, quantity_out=0, new_price=None):
+        """
+        Actualiza el stock y precio del producto:
+        - Si es entrada (quantity_in > 0), suma cantidad y actualiza precio unitario.
+        - Si es salida (quantity_out > 0), resta cantidad, sin modificar precio.
+        """
+        if quantity_out > self.available_quantity:
+            raise ValidationError(f"No hay suficiente stock para sacar {quantity_out} unidades de {self.name}. Stock disponible: {self.available_quantity}")
+        
+        if quantity_in > 0:
+            # Actualizar precio promedio ponderado
+            total_value = self.unit_price * self.available_quantity + new_price * quantity_in
+            total_quantity = self.available_quantity + quantity_in
+            self.unit_price = total_value / total_quantity
+            self.available_quantity = total_quantity
+        elif quantity_out > 0:
+            self.available_quantity -= quantity_out
+
+        self.save()
 
 # Modelo para los pesticidas
-class Pesticide(models.Model):
-    id_pesticide = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=200)
+class Pesticide(Product):
     category = models.CharField(max_length=200)
-    unit_of_measurement = models.CharField(max_length=100)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     expiration_date = models.DateField()
-    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    presentation = models.CharField(max_length=100)
-    active_principle = models.CharField(
-        max_length=100,
-        blank=False,  # No puede estar vacío
-        null=False    # No puede ser nulo en la base de datos
-    )
-    concentration = models.CharField(
-        max_length=255,
-        blank=False,  # No puede estar vacío
-        null=False,   # No puede ser nulo
-        default=""    # Valor por defecto vacío
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
+    active_principle = models.CharField(max_length=100)
+    concentration = models.CharField(max_length=255, default="")
 
 # Modelo para los combustibles
-class Fuel(models.Model):
-    id_fuel = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=200)
-    unit_of_measurement = models.CharField(max_length=100)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+class Fuel(Product):
     supplier = models.CharField(max_length=200)
     fuel_type = models.CharField(max_length=100, default='')
-    presentation = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
 
 # Modelo para las semillas
-class Seed(models.Model):
-    id_seed = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255)
+class Seed(Product):
     category = models.CharField(max_length=255)
     seed_type = models.CharField(max_length=255)
-    presentation = models.CharField(max_length=255)
-    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     expiration_date = models.DateField()
+
+# Modelo abstracto base para transacciones
+class Transaction(models.Model):
+    quantity_in = models.PositiveIntegerField(default=0)
+    quantity_out = models.PositiveIntegerField(default=0)
+    observations = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        abstract = True
 
-# Modelo para las transacciones de pesticidas
-class PesticideTransaction(models.Model):
-    id_pesticide_transaction = models.AutoField(primary_key=True)
+    def clean(self):
+        if self.quantity_in > 0 and self.quantity_out > 0:
+            raise ValidationError("No se puede registrar entrada y salida en la misma transacción.")
+        if self.quantity_in == 0 and self.quantity_out == 0:
+            raise ValidationError("Debe ingresar una cantidad para entrada o salida.")
+
+# Transacción para pesticidas
+class PesticideTransaction(Transaction):
     pesticide = models.ForeignKey(Pesticide, on_delete=models.CASCADE)
-    quantity_in = models.PositiveIntegerField(default=0)  # Cantidad que entra (entrada)
-    quantity_out = models.PositiveIntegerField(default=0)  # Cantidad que sale (salida)
-    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación automática
-    updated_at = models.DateTimeField(auto_now=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Precio unitario solo para entradas")
 
     def save(self, *args, **kwargs):
-        # Actualizar cantidad disponible al guardar la transacción
+        # Validar cantidad disponible para salida
+        self.clean()
+        
         if self.quantity_in > 0:
-            self.pesticide.available_quantity += self.quantity_in
+            if self.price is None:
+                raise ValidationError("Debe ingresar un precio para la entrada.")
+            self.pesticide.update_stock(quantity_in=self.quantity_in, new_price=self.price)
         elif self.quantity_out > 0:
-            self.pesticide.available_quantity -= self.quantity_out
-        self.pesticide.save()  # Guardar la actualización en el producto
+            # Para salida, se usa precio actual del producto, no se actualiza precio ni se ingresa
+            self.price = self.pesticide.unit_price
+            self.pesticide.update_stock(quantity_out=self.quantity_out)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f'Transacción de {self.pesticide.name}'
 
-# Modelo para las transacciones de combustible
-class FuelTransaction(models.Model):
-    id_fuel_transaction = models.AutoField(primary_key=True)
+# Transacción para combustibles
+class FuelTransaction(Transaction):
     fuel = models.ForeignKey(Fuel, on_delete=models.CASCADE)
-    quantity_in = models.PositiveIntegerField(default=0)  # Cantidad que entra (entrada)
-    quantity_out = models.PositiveIntegerField(default=0)  # Cantidad que sale (salida)
-    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación automática
-    updated_at = models.DateTimeField(auto_now=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Precio unitario solo para entradas")
 
     def save(self, *args, **kwargs):
-        # Actualizar cantidad disponible al guardar la transacción
+        self.clean()
+
         if self.quantity_in > 0:
-            self.fuel.available_quantity += self.quantity_in
+            if self.price is None:
+                raise ValidationError("Debe ingresar un precio para la entrada.")
+            self.fuel.update_stock(quantity_in=self.quantity_in, new_price=self.price)
         elif self.quantity_out > 0:
-            self.fuel.available_quantity -= self.quantity_out
-        self.fuel.save()  # Guardar la actualización en el producto
+            self.price = self.fuel.unit_price
+            self.fuel.update_stock(quantity_out=self.quantity_out)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f'Transacción de {self.fuel.name}'
 
-# Modelo para las transacciones de semillas
-class SeedTransaction(models.Model):
-    id_seed_transaction = models.AutoField(primary_key=True)
+# Transacción para semillas
+class SeedTransaction(Transaction):
     seed = models.ForeignKey(Seed, on_delete=models.CASCADE)
-    quantity_in = models.PositiveIntegerField(default=0)  # Cantidad que entra (entrada)
-    quantity_out = models.PositiveIntegerField(default=0)  # Cantidad que sale (salida)
-    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación automática
-    updated_at = models.DateTimeField(auto_now=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Precio unitario solo para entradas")
 
     def save(self, *args, **kwargs):
-        # Actualizar cantidad disponible al guardar la transacción
+        self.clean()
+
         if self.quantity_in > 0:
-            self.seed.available_quantity += self.quantity_in
+            if self.price is None:
+                raise ValidationError("Debe ingresar un precio para la entrada.")
+            self.seed.update_stock(quantity_in=self.quantity_in, new_price=self.price)
         elif self.quantity_out > 0:
-            self.seed.available_quantity -= self.quantity_out
-        self.seed.save()  # Guardar la actualización en el producto
+            self.price = self.seed.unit_price
+            self.seed.update_stock(quantity_out=self.quantity_out)
         super().save(*args, **kwargs)
 
     def __str__(self):
