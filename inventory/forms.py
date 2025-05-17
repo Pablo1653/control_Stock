@@ -1,253 +1,273 @@
 from django import forms
-from .models import Pesticide, Fuel, PesticideTransaction, FuelTransaction, Seed, SeedTransaction
+from django.core.exceptions import ValidationError
+from .models import Pesticide, Fuel, Seed, PesticideTransaction, FuelTransaction, SeedTransaction
 
-# Widget común para entradas numéricas
-def numeric_input(attrs=None):
-    return forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese valor', **(attrs or {})})
-
-# Widget común para entradas de texto
-def text_input(attrs=None):
-    return forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese valor', **(attrs or {})})
-
-# Función común de validación para verificar existencia en la base de datos
-def check_exists(model, field, value):
-    if model.objects.filter(**{field: value}).exists():
-        raise forms.ValidationError(f"Ya existe un(a) {model.__name__.lower()} con ese nombre.")
-    return value
-
-TRANSACTION_CHOICES = (
-    ('in', 'Entrada'),
-    ('out', 'Salida'),
-)
-
-# Formulario para el modelo Pesticide
 class PesticideForm(forms.ModelForm):
     class Meta:
         model = Pesticide
-        fields = ['name', 'category', 'unit_of_measurement', 'unit_price', 'expiration_date', 'available_quantity', 'presentation', 'active_principle', 'concentration']
-        labels = {
-            'name': 'Nombre del Fitosanitario',
-            'category': 'Categoría',
-            'unit_of_measurement': 'Unidad de medida',
-            'unit_price': 'Precio unitario',
-            'expiration_date': 'Fecha de vencimiento',
-            'available_quantity': 'Cantidad disponible',
-            'presentation': 'Forma de presentación',
-            'active_principle': 'Principio activo',
-            'concentration': 'Concentración (%)',
-        }
+        fields = ['name', 'unit_of_measurement', 'unit_price', 'available_quantity',
+                  'presentation', 'category', 'expiration_date', 'active_principle', 'concentration']
         widgets = {
-            'name': text_input({'placeholder': 'Nombre del fitosanitario'}),
-            'category': text_input({'placeholder': 'Categoría'}),
-            'unit_of_measurement': text_input({'placeholder': 'Unidad de medida'}),
-            'unit_price': numeric_input(),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_of_measurement': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'available_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'presentation': forms.TextInput(attrs={'class': 'form-control'}),
+            'category': forms.TextInput(attrs={'class': 'form-control'}),
             'expiration_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'available_quantity': numeric_input({'placeholder': 'Cantidad disponible'}),
-            'presentation': text_input({'placeholder': 'Forma de presentación'}),
-            'active_principle': text_input({'placeholder': 'Principio activo'}),
-            'concentration': text_input({'placeholder': 'Concentración (%)'}),
+            'active_principle': forms.TextInput(attrs={'class': 'form-control'}),
+            'concentration': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        return check_exists(Pesticide, 'name', name)
-
-# Formulario para el modelo Fuel
 class FuelForm(forms.ModelForm):
     class Meta:
         model = Fuel
-        fields = ['name','fuel_type','supplier', 'unit_of_measurement', 'unit_price', 'available_quantity']
-        labels = {
-            'name': 'Nombre del combustible',
-            'fuel_type': 'Tipo de combustible',
-            'supplier': 'Proveedor',
-            'unit_of_measurement': 'Unidad de medida',
-            'unit_price': 'Precio unitario',
-            'available_quantity': 'Cantidad disponible',
-        }
+        fields = ['name', 'unit_of_measurement', 'unit_price', 'available_quantity',
+                  'presentation', 'supplier', 'fuel_type']
         widgets = {
-            'name': text_input({'placeholder': 'Nombre del combustible'}),
-            'fuel_type': text_input({'placeholder': 'Tipo de combustible'}),
-            'supplier': text_input({'placeholder': 'Proveedor'}),
-            'unit_of_measurement': text_input({'placeholder': 'Unidad de medida'}),
-            'unit_price': numeric_input(),
-            'available_quantity': numeric_input({'placeholder': 'Cantidad disponible'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_of_measurement': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'available_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'presentation': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier': forms.TextInput(attrs={'class': 'form-control'}),
+            'fuel_type': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        return check_exists(Fuel, 'name', name)
-
-# Formulario para el modelo Seed
 class SeedForm(forms.ModelForm):
     class Meta:
         model = Seed
-        fields = ['name', 'seed_type', 'presentation', 'available_quantity', 'unit_price', 'expiration_date']
-        labels = {
-            'name': 'Nombre de la semilla',
-            'seed_type': 'Tipo de semilla',
-            'presentation': 'Forma de presentación',
-            'available_quantity': 'Cantidad disponible',
-            'unit_price': 'Precio unitario',
-            'expiration_date': 'Fecha de vencimiento',
-        }
+        fields = ['name', 'unit_of_measurement', 'unit_price', 'available_quantity',
+                  'presentation', 'category', 'seed_type', 'expiration_date']
         widgets = {
-            'name': text_input({'placeholder': 'Nombre de la semilla'}),
-            'seed_type': text_input({'placeholder': 'Tipo de semilla'}),
-            'presentation': text_input({'placeholder': 'Forma de presentación'}),
-            'available_quantity': numeric_input({'placeholder': 'Cantidad disponible'}),
-            'unit_price': numeric_input(),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_of_measurement': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'available_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'presentation': forms.TextInput(attrs={'class': 'form-control'}),
+            'category': forms.TextInput(attrs={'class': 'form-control'}),
+            'seed_type': forms.TextInput(attrs={'class': 'form-control'}),
             'expiration_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        return check_exists(Seed, 'name', name)
-
-
-# Formulario para las transacciones de pesticidas
 class PesticideTransactionForm(forms.ModelForm):
-    transaction_type = forms.ChoiceField(choices=TRANSACTION_CHOICES, widget=forms.RadioSelect, label="Tipo de movimiento")
+    TRANSACTION_CHOICES = [
+        ('in', 'Entrada'),
+        ('out', 'Salida'),
+    ]
+    transaction_type = forms.ChoiceField(choices=TRANSACTION_CHOICES, label="Tipo de Transacción")
+    quantity = forms.DecimalField(max_digits=10, decimal_places=2, label="Cantidad")
     
     class Meta:
         model = PesticideTransaction
-        fields = ['pesticide', 'transaction_type', 'quantity', 'unit_price', 'observations']
-        labels = {
-            'pesticide': 'Pesticida',
-            'transaction_type': 'Tipo de movimiento',
-            'quantity': 'Cantidad',
-            'unit_price': 'Precio unitario',
-            'observations': 'Observaciones',
-        }
+        fields = ['pesticide', 'observations', 'receipt_number', 'unit_price']
         widgets = {
-            'pesticide': forms.Select(attrs={'class': 'form-control'}),
-            'quantity': numeric_input({'placeholder': 'Cantidad'}),
-            'unit_price': numeric_input(),
-            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones'}),
+            'pesticide': forms.Select(attrs={'class': 'form-select'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'receipt_number': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        data = self.data or self.initial
-        if data.get('transaction_type') == 'out':
-            self.fields['unit_price'].widget.attrs['readonly'] = True
-            self.fields['unit_price'].required = False
-        else:
-            self.fields['unit_price'].widget.attrs.pop('readonly', None)
-            self.fields['unit_price'].required = True
+        # Aplicar clases de Bootstrap a los campos que no están en Meta.widgets
+        self.fields['transaction_type'].widget.attrs.update({'class': 'form-check-input'})
+        self.fields['quantity'].widget.attrs.update({'class': 'form-control', 'step': '0.01'})
+        
+        # Hacemos que unit_price no sea requerido por defecto
+        self.fields['unit_price'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
         transaction_type = cleaned_data.get('transaction_type')
         quantity = cleaned_data.get('quantity')
         unit_price = cleaned_data.get('unit_price')
-
+        
         if not quantity or quantity <= 0:
-            raise forms.ValidationError('Debe ingresar una cantidad válida.')
-
+            self.add_error('quantity', 'La cantidad debe ser mayor a cero')
+            
         if transaction_type == 'in':
+            # Para entradas, necesitamos un precio
             if not unit_price or unit_price <= 0:
-                raise forms.ValidationError('Debe ingresar un precio unitario válido para una entrada.')
-        else:
-            # Para salida, no se ingresa precio manualmente
-            cleaned_data['unit_price'] = None
-
+                self.add_error('unit_price', 'Debe ingresar un precio unitario para las entradas')
+                
+        # Agregamos los campos quantity_in y quantity_out a cleaned_data
+        if transaction_type == 'in':
+            cleaned_data['quantity_in'] = quantity
+            cleaned_data['quantity_out'] = 0
+        elif transaction_type == 'out':
+            cleaned_data['quantity_in'] = 0
+            cleaned_data['quantity_out'] = quantity
+            
         return cleaned_data
 
+    def _post_clean(self):
+        """
+        Este método se ejecuta después de clean() y antes de la validación del modelo.
+        Vamos a asignar quantity_in y quantity_out antes de que el modelo haga su validación.
+        """
+        transaction_type = self.cleaned_data.get('transaction_type')
+        quantity = self.cleaned_data.get('quantity')
+        
+        if transaction_type == 'in':
+            self.instance.quantity_in = quantity
+            self.instance.quantity_out = 0
+        elif transaction_type == 'out':
+            self.instance.quantity_in = 0
+            self.instance.quantity_out = quantity
+            
+        super()._post_clean()
+        
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Para salidas, tomamos el precio unitario del pesticida
+        if self.cleaned_data.get('transaction_type') == 'out':
+            instance.unit_price = instance.pesticide.unit_price
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
-# Formulario para las transacciones de combustibles
 class FuelTransactionForm(forms.ModelForm):
-    transaction_type = forms.ChoiceField(choices=TRANSACTION_CHOICES, widget=forms.RadioSelect, label="Tipo de movimiento")
+    TRANSACTION_CHOICES = [
+        ('in', 'Entrada'),
+        ('out', 'Salida'),
+    ]
+    transaction_type = forms.ChoiceField(choices=TRANSACTION_CHOICES, label="Tipo de Transacción")
+    quantity = forms.DecimalField(max_digits=10, decimal_places=2, label="Cantidad")
     
     class Meta:
         model = FuelTransaction
-        fields = ['fuel', 'transaction_type', 'quantity', 'unit_price', 'observations']
-        labels = {
-            'fuel': 'Combustible',
-            'transaction_type': 'Tipo de movimiento',
-            'quantity': 'Cantidad',
-            'unit_price': 'Precio unitario',
-            'observations': 'Observaciones',
-        }
+        fields = ['fuel', 'observations', 'receipt_number', 'unit_price']
         widgets = {
-            'fuel': forms.Select(attrs={'class': 'form-control'}),
-            'quantity': numeric_input({'placeholder': 'Cantidad'}),
-            'unit_price': numeric_input(),
-            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones'}),
+            'fuel': forms.Select(attrs={'class': 'form-select'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'receipt_number': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        data = self.data or self.initial
-        if data.get('transaction_type') == 'out':
-            self.fields['unit_price'].widget.attrs['readonly'] = True
-            self.fields['unit_price'].required = False
-        else:
-            self.fields['unit_price'].widget.attrs.pop('readonly', None)
-            self.fields['unit_price'].required = True
+        self.fields['transaction_type'].widget.attrs.update({'class': 'form-check-input'})
+        self.fields['quantity'].widget.attrs.update({'class': 'form-control', 'step': '0.01'})
+        self.fields['unit_price'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
         transaction_type = cleaned_data.get('transaction_type')
         quantity = cleaned_data.get('quantity')
         unit_price = cleaned_data.get('unit_price')
-
+        
         if not quantity or quantity <= 0:
-            raise forms.ValidationError('Debe ingresar una cantidad válida.')
-
+            self.add_error('quantity', 'La cantidad debe ser mayor a cero')
+            
         if transaction_type == 'in':
             if not unit_price or unit_price <= 0:
-                raise forms.ValidationError('Debe ingresar un precio unitario válido para una entrada.')
-        else:
-            cleaned_data['unit_price'] = None
-
+                self.add_error('unit_price', 'Debe ingresar un precio unitario para las entradas')
+                
+        # Agregamos los campos quantity_in y quantity_out a cleaned_data
+        if transaction_type == 'in':
+            cleaned_data['quantity_in'] = quantity
+            cleaned_data['quantity_out'] = 0
+        elif transaction_type == 'out':
+            cleaned_data['quantity_in'] = 0
+            cleaned_data['quantity_out'] = quantity
+            
         return cleaned_data
 
+    def _post_clean(self):
+        transaction_type = self.cleaned_data.get('transaction_type')
+        quantity = self.cleaned_data.get('quantity')
+        
+        if transaction_type == 'in':
+            self.instance.quantity_in = quantity
+            self.instance.quantity_out = 0
+        elif transaction_type == 'out':
+            self.instance.quantity_in = 0
+            self.instance.quantity_out = quantity
+            
+        super()._post_clean()
+        
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        if self.cleaned_data.get('transaction_type') == 'out':
+            instance.unit_price = instance.fuel.unit_price
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
-# Formulario para las transacciones de semillas
 class SeedTransactionForm(forms.ModelForm):
-    transaction_type = forms.ChoiceField(choices=TRANSACTION_CHOICES, widget=forms.RadioSelect, label="Tipo de movimiento")
+    TRANSACTION_CHOICES = [
+        ('in', 'Entrada'),
+        ('out', 'Salida'),
+    ]
+    transaction_type = forms.ChoiceField(choices=TRANSACTION_CHOICES, label="Tipo de Transacción")
+    quantity = forms.DecimalField(max_digits=10, decimal_places=2, label="Cantidad")
     
     class Meta:
         model = SeedTransaction
-        fields = ['seed', 'transaction_type', 'quantity', 'unit_price', 'observations']
-        labels = {
-            'seed': 'Semilla',
-            'transaction_type': 'Tipo de movimiento',
-            'quantity': 'Cantidad',
-            'unit_price': 'Precio unitario',
-            'observations': 'Observaciones',
-        }
+        fields = ['seed', 'observations', 'receipt_number', 'unit_price']
         widgets = {
-            'seed': forms.Select(attrs={'class': 'form-control'}),
-            'quantity': numeric_input({'placeholder': 'Cantidad'}),
-            'unit_price': numeric_input(),
-            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones'}),
+            'seed': forms.Select(attrs={'class': 'form-select'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'receipt_number': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        data = self.data or self.initial
-        if data.get('transaction_type') == 'out':
-            self.fields['unit_price'].widget.attrs['readonly'] = True
-            self.fields['unit_price'].required = False
-        else:
-            self.fields['unit_price'].widget.attrs.pop('readonly', None)
-            self.fields['unit_price'].required = True
+        self.fields['transaction_type'].widget.attrs.update({'class': 'form-check-input'})
+        self.fields['quantity'].widget.attrs.update({'class': 'form-control', 'step': '0.01'})
+        self.fields['unit_price'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
         transaction_type = cleaned_data.get('transaction_type')
         quantity = cleaned_data.get('quantity')
         unit_price = cleaned_data.get('unit_price')
-
+        
         if not quantity or quantity <= 0:
-            raise forms.ValidationError('Debe ingresar una cantidad válida.')
-
+            self.add_error('quantity', 'La cantidad debe ser mayor a cero')
+            
         if transaction_type == 'in':
             if not unit_price or unit_price <= 0:
-                raise forms.ValidationError('Debe ingresar un precio unitario válido para una entrada.')
-        else:
-            cleaned_data['unit_price'] = None
-
+                self.add_error('unit_price', 'Debe ingresar un precio unitario para las entradas')
+                
+        # Agregamos los campos quantity_in y quantity_out a cleaned_data
+        if transaction_type == 'in':
+            cleaned_data['quantity_in'] = quantity
+            cleaned_data['quantity_out'] = 0
+        elif transaction_type == 'out':
+            cleaned_data['quantity_in'] = 0
+            cleaned_data['quantity_out'] = quantity
+            
         return cleaned_data
+
+    def _post_clean(self):
+        transaction_type = self.cleaned_data.get('transaction_type')
+        quantity = self.cleaned_data.get('quantity')
+        
+        if transaction_type == 'in':
+            self.instance.quantity_in = quantity
+            self.instance.quantity_out = 0
+        elif transaction_type == 'out':
+            self.instance.quantity_in = 0
+            self.instance.quantity_out = quantity
+            
+        super()._post_clean()
+        
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        if self.cleaned_data.get('transaction_type') == 'out':
+            instance.unit_price = instance.seed.unit_price
+        
+        if commit:
+            instance.save()
+        
+        return instance

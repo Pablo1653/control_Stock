@@ -66,7 +66,7 @@
                     <tbody>
                         {% for pesticide, subtotal in pesticide_subtotals %}
                         <tr>
-                            <td>{{ pesticide.id_pesticide}}</td>
+                            <td>{{ pesticide.id}}</td>
                             <td>{{ pesticide.name }}</td>
                             <td>{{ pesticide.category }}</td>
                             <td>{{ pesticide.active_principle }}</td>
@@ -103,7 +103,7 @@
                     <tbody>
                         {% for fuel, subtotal in fuel_subtotals %}
                         <tr>
-                            <td>{{ fuel.id_fuel}}</td>
+                            <td>{{ fuel.id}}</td>
                             <td>{{ fuel.name }}</td>
                             <td>{{ fuel.fuel_type }}</td>
                             <td>{{ fuel.supplier }}</td>
@@ -138,7 +138,7 @@
                     <tbody>
                         {% for seed, subtotal in seed_subtotals %}
                         <tr>
-                            <td>{{ seed.id_seed }}</td>
+                            <td>{{ seed.id }}</td>
                             <td>{{ seed.name }}</td>
                             <td>{{ seed.seed_type }}</td>
                             <td>{{ seed.presentation }}</td>

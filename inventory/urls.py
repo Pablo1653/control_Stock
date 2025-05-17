@@ -14,4 +14,10 @@ urlpatterns = [
     path('add_pesticide/', views.add_pesticide, name='add_pesticide'),
     path('add_fuel/', views.add_fuel, name='add_fuel'),
     path('add_seed/', views.add_seed, name='add_seed'),  # Ruta para agregar transacciones de semillas
+
+    path('pesticide_movements/', views.pesticide_movements, name='pesticide_movements'),
+    path('fuel_movements/', views.fuel_movements, name='fuel_movements'),
+    path('seed_movements/', views.seed_movements, name='seed_movements'),
+
+
 ]
