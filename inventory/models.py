@@ -5,9 +5,10 @@ from django.core.exceptions import ValidationError
 class Product(models.Model):
     name = models.CharField(max_length=255)
     unit_of_measurement = models.CharField(max_length=100)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     presentation = models.CharField(max_length=100)
+    # Estos campos ahora son opcionales con null=True, blank=True
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    available_quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -18,16 +19,26 @@ class Product(models.Model):
         return self.name
 
     def update_stock(self, quantity_in=0, quantity_out=0, new_price=None):
-        if quantity_out > self.available_quantity:
+        # Inicializa available_quantity si es None
+        if self.available_quantity is None:
+            self.available_quantity = 0
+
+        if quantity_out > 0 and (self.available_quantity is None or quantity_out > self.available_quantity):
             raise ValidationError(
-                f"No hay suficiente stock para retirar {quantity_out} unidades de {self.name}. Stock disponible: {self.available_quantity}"
+                f"No hay suficiente stock para retirar {quantity_out} unidades de {self.name}. Stock disponible: {self.available_quantity or 0}"
             )
 
         if quantity_in > 0:
-            total_value = self.unit_price * self.available_quantity + new_price * quantity_in
-            total_quantity = self.available_quantity + quantity_in
-            self.unit_price = total_value / total_quantity
-            self.available_quantity = total_quantity
+            # Primera entrada de stock
+            if self.unit_price is None or self.available_quantity == 0:
+                self.unit_price = new_price
+                self.available_quantity = quantity_in
+            else:
+                # Cálculo del precio promedio ponderado
+                total_value = self.unit_price * self.available_quantity + new_price * quantity_in
+                total_quantity = self.available_quantity + quantity_in
+                self.unit_price = total_value / total_quantity
+                self.available_quantity = total_quantity
         elif quantity_out > 0:
             self.available_quantity -= quantity_out
 
@@ -62,9 +73,9 @@ class Transaction(models.Model):
         abstract = True
 
     def clean(self):
-        if self.quantity_in and self.quantity_out:
+        if self.quantity_in > 0 and self.quantity_out > 0:
             raise ValidationError("No se puede registrar entrada y salida simultáneamente.")
-        if not self.quantity_in and not self.quantity_out:
+        if not self.quantity_in > 0 and not self.quantity_out > 0:
             raise ValidationError("Debe registrar una entrada o salida.")
 
 # Transacciones específicas
@@ -73,22 +84,35 @@ class PesticideTransaction(Transaction):
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        print("DEBUG: Iniciando save de PesticideTransaction")
         self.clean()
-        print(f"DEBUG: quantity_in={self.quantity_in}, quantity_out={self.quantity_out}, unit_price={self.unit_price}")
-
+        
+        # Para transacciones de entrada, requerir precio
         if self.quantity_in > 0:
             if not self.unit_price:
                 raise ValidationError("Debe ingresar precio para la entrada.")
-            print(f"DEBUG: Actualizando stock para entrada, cantidad: {self.quantity_in}, precio: {self.unit_price}")
+            
+            # Guardar primero la transacción
+            super().save(*args, **kwargs)
+            # Luego actualizar el stock
             self.pesticide.update_stock(quantity_in=self.quantity_in, new_price=self.unit_price)
+        
+        # Para transacciones de salida
         elif self.quantity_out > 0:
+            # Verificar que haya un precio en el producto
+            if self.pesticide.unit_price is None:
+                raise ValidationError("No se puede retirar producto sin precio establecido. Primero debe realizar una entrada.")
+            
             self.unit_price = self.pesticide.unit_price
-            print(f"DEBUG: Actualizando stock para salida, cantidad: {self.quantity_out}")
+            
+            # Guardar primero la transacción
+            super().save(*args, **kwargs)
+            # Luego actualizar el stock
             self.pesticide.update_stock(quantity_out=self.quantity_out)
+        else:
+            super().save(*args, **kwargs)
 
-        super().save(*args, **kwargs)
-        print("DEBUG: Guardado exitoso de PesticideTransaction")
+    def __str__(self):
+        return f"{self.pesticide.name}: {'Entrada' if self.quantity_in else 'Salida'}"
 
 class FuelTransaction(Transaction):
     fuel = models.ForeignKey(Fuel, on_delete=models.CASCADE)
@@ -96,16 +120,31 @@ class FuelTransaction(Transaction):
 
     def save(self, *args, **kwargs):
         self.clean()
-        super().save(*args, **kwargs)
-
+        
+        # Para transacciones de entrada, requerir precio
         if self.quantity_in > 0:
             if not self.unit_price:
                 raise ValidationError("Debe ingresar precio para la entrada.")
+                
+            # Guardar primero la transacción
+            super().save(*args, **kwargs)
+            # Luego actualizar el stock
             self.fuel.update_stock(quantity_in=self.quantity_in, new_price=self.unit_price)
+        
+        # Para transacciones de salida
         elif self.quantity_out > 0:
+            # Verificar que haya un precio en el producto
+            if self.fuel.unit_price is None:
+                raise ValidationError("No se puede retirar producto sin precio establecido. Primero debe realizar una entrada.")
+                
             self.unit_price = self.fuel.unit_price
+            
+            # Guardar primero la transacción
+            super().save(*args, **kwargs)
+            # Luego actualizar el stock
             self.fuel.update_stock(quantity_out=self.quantity_out)
-            super().save(update_fields=['unit_price'])
+        else:
+            super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.fuel.name}: {'Entrada' if self.quantity_in else 'Salida'}"
@@ -116,16 +155,31 @@ class SeedTransaction(Transaction):
 
     def save(self, *args, **kwargs):
         self.clean()
-        super().save(*args, **kwargs)
-
+        
+        # Para transacciones de entrada, requerir precio
         if self.quantity_in > 0:
             if not self.unit_price:
                 raise ValidationError("Debe ingresar precio para la entrada.")
+                
+            # Guardar primero la transacción
+            super().save(*args, **kwargs)
+            # Luego actualizar el stock
             self.seed.update_stock(quantity_in=self.quantity_in, new_price=self.unit_price)
+        
+        # Para transacciones de salida
         elif self.quantity_out > 0:
+            # Verificar que haya un precio en el producto
+            if self.seed.unit_price is None:
+                raise ValidationError("No se puede retirar producto sin precio establecido. Primero debe realizar una entrada.")
+                
             self.unit_price = self.seed.unit_price
+            
+            # Guardar primero la transacción
+            super().save(*args, **kwargs)
+            # Luego actualizar el stock
             self.seed.update_stock(quantity_out=self.quantity_out)
-            super().save(update_fields=['unit_price'])
+        else:
+            super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.seed.name}: {'Entrada' if self.quantity_in else 'Salida'}"
