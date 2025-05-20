@@ -11,7 +11,6 @@
     <div class="container mt-4">
         <h2 class="text-center mb-4">Registrar Transacción de Fitosanitario</h2>
         
-        <!-- Mostrar mensajes flash -->
         {% if messages %}
             <div class="mb-3">
                 {% for message in messages %}
@@ -23,13 +22,12 @@
             </div>
         {% endif %}
         
-        <!-- Formulario -->
         <form method="POST" novalidate>
             {% csrf_token %}
             
             <!-- Campo Pesticida -->
             <div class="mb-3">
-                <label for="{{ form.pesticide.id_for_label }}" class="form-label">{{ form.pesticide.label }}</label>
+                {{ form.pesticide.label_tag }}
                 {{ form.pesticide }}
                 {% for error in form.pesticide.errors %}
                     <div class="text-danger">{{ error }}</div>
@@ -38,15 +36,8 @@
             
             <!-- Campo Tipo de Transacción -->
             <div class="mb-3">
-                <label class="form-label">Tipo de Transacción</label>
-                <div class="form-check">
-                    <input type="radio" name="transaction_type" value="in" id="id_transaction_type_0" class="form-check-input" checked>
-                    <label for="id_transaction_type_0" class="form-check-label">Entrada</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" name="transaction_type" value="out" id="id_transaction_type_1" class="form-check-input">
-                    <label for="id_transaction_type_1" class="form-check-label">Salida</label>
-                </div>
+                {{ form.transaction_type.label_tag }}
+                {{ form.transaction_type }}
                 {% for error in form.transaction_type.errors %}
                     <div class="text-danger">{{ error }}</div>
                 {% endfor %}
@@ -54,42 +45,42 @@
             
             <!-- Campo Cantidad -->
             <div class="mb-3">
-                <label for="{{ form.quantity.id_for_label }}" class="form-label">Cantidad</label>
-                <input type="number" name="quantity" id="id_quantity" step="0.01" class="form-control" required>
+                {{ form.quantity.label_tag }}
+                {{ form.quantity }}
                 {% for error in form.quantity.errors %}
                     <div class="text-danger">{{ error }}</div>
                 {% endfor %}
             </div>
             
-            <!-- Campo Precio Unitario (visible solo para entradas) -->
+            <!-- Campo Precio Unitario -->
             <div class="mb-3" id="div_id_unit_price">
-                <label for="{{ form.unit_price.id_for_label }}" class="form-label">Precio Unitario</label>
-                <input type="number" name="unit_price" id="id_unit_price" step="0.01" class="form-control">
+                {{ form.unit_price.label_tag }}
+                {{ form.unit_price }}
                 <div class="form-text">Este campo es obligatorio para las entradas.</div>
                 {% for error in form.unit_price.errors %}
                     <div class="text-danger">{{ error }}</div>
                 {% endfor %}
             </div>
             
-            <!-- Campo Observaciones -->
-            <div class="mb-3">
-                <label for="{{ form.observations.id_for_label }}" class="form-label">Observaciones</label>
-                {{ form.observations }}
-                {% for error in form.observations.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                {% endfor %}
-            </div>
-            
             <!-- Campo Número de Recibo -->
             <div class="mb-3">
-                <label for="{{ form.receipt_number.id_for_label }}" class="form-label">Número de Recibo</label>
+                {{ form.receipt_number.label_tag }}
                 {{ form.receipt_number }}
                 {% for error in form.receipt_number.errors %}
                     <div class="text-danger">{{ error }}</div>
                 {% endfor %}
             </div>
             
-            <!-- Error no asociado a un campo específico -->
+            <!-- Campo Observaciones -->
+            <div class="mb-3">
+                {{ form.observations.label_tag }}
+                {{ form.observations }}
+                {% for error in form.observations.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+            
+            <!-- Errores generales -->
             {% if form.non_field_errors %}
                 <div class="alert alert-danger">
                     {% for error in form.non_field_errors %}
@@ -104,42 +95,30 @@
         <a href="{% url 'inventory_list' %}" class="btn btn-secondary mt-3">Volver al menú</a>
     </div>
     
-    <!-- Bootstrap JS Bundle -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Mostrar/ocultar campo de precio -->
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const transactionTypeRadios = document.querySelectorAll('input[name="transaction_type"]');
-        const priceDiv = document.getElementById('div_id_unit_price');
-        const priceInput = document.getElementById('id_unit_price');
-        
+        const transactionType = document.getElementById('id_transaction_type');
+        const unitPriceDiv = document.getElementById('div_id_unit_price');
+        const unitPriceInput = document.getElementById('id_unit_price');
+
         function togglePriceField() {
-            let selectedValue = null;
-            transactionTypeRadios.forEach(radio => {
-                if (radio.checked) {
-                    selectedValue = radio.value;
-                }
-            });
-            
-            if (selectedValue === 'in') {
-                priceDiv.style.display = 'block';
-                priceInput.disabled = false;
-                priceInput.required = true;
+            if (transactionType.value === 'in') {
+                unitPriceDiv.style.display = 'block';
+                unitPriceInput.disabled = false;
+                unitPriceInput.required = true;
             } else {
-                priceDiv.style.display = 'none';
-                priceInput.disabled = true;
-                priceInput.required = false;
-                // No limpiamos el valor para no perderlo en el backend
+                unitPriceDiv.style.display = 'none';
+                unitPriceInput.disabled = true;
+                unitPriceInput.required = false;
             }
         }
-        
-        // Ejecutar al inicio
+
         togglePriceField();
-        
-        // Agregar evento a cada radio button
-        transactionTypeRadios.forEach(radio => {
-            radio.addEventListener('change', togglePriceField);
-        });
+        transactionType.addEventListener('change', togglePriceField);
     });
     </script>
 </body>
