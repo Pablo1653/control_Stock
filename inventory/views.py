@@ -104,7 +104,9 @@ def add_pesticide(request):
         if form.is_valid():
             try:
                 print("DEBUG: Intentando guardar formulario")
-                transaction = form.save()
+                transaction = form.save(commit=False)
+                transaction.created_by_email = request.user.email if request.user.is_authenticated else 'anónimo'
+                transaction.save()
                 print("DEBUG: Guardado exitoso, ID:", transaction.id)
                 
                 # Mensaje más informativo según el tipo de transacción
@@ -246,13 +248,55 @@ def add_seed(request):
     return render(request, 'inventory/add_seed.html', {'form': form})
 
 def pesticide_movements(request):
-    transactions = PesticideTransaction.objects.select_related('pesticide')
-    return render(request, 'inventory/pesticide_movements.html', {'transactions': transactions})
+    transactions = PesticideTransaction.objects.select_related('pesticide').order_by('-created_at')
+
+    for tx in transactions:
+        quantity = tx.quantity_in if tx.quantity_in else tx.quantity_out
+        tx.subtotal = quantity * tx.unit_price if quantity and tx.unit_price else 0
+
+    # ✅ Agregá esta línea para obtener los nombres únicos de pesticidas
+    pesticide_names = PesticideTransaction.objects.select_related('pesticide') \
+        .values_list('pesticide__name', flat=True).distinct().order_by('pesticide__name')
+
+    context = {
+        'transactions': transactions,
+        'pesticide_names': pesticide_names,  # ✅ esto es lo que faltaba
+    }
+    return render(request, 'inventory/pesticide_movements.html', context)
+
+   
 
 def fuel_movements(request):
-    transactions = FuelTransaction.objects.select_related('fuel')
-    return render(request, 'inventory/fuel_movements.html', {'transactions': transactions})
+    transactions = FuelTransaction.objects.select_related('fuel').order_by('-created_at')
+
+    for tx in transactions:
+        quantity = tx.quantity_in if tx.quantity_in else tx.quantity_out
+        tx.subtotal = quantity * tx.unit_price if quantity and tx.unit_price else 0
+
+    fuel_names = FuelTransaction.objects.select_related('fuel') \
+        .values_list('fuel__name', flat=True).distinct().order_by('fuel__name')
+
+    context = {
+        'transactions': transactions,
+        'fuel_names': fuel_names,
+        'title': 'Movimientos de Combustibles'
+    }
+    return render(request, 'inventory/fuel_movements.html', context)
+
 
 def seed_movements(request):
-    transactions = SeedTransaction.objects.select_related('seed')
-    return render(request, 'inventory/seed_movements.html', {'transactions': transactions})
+    transactions = SeedTransaction.objects.select_related('seed').order_by('-created_at')
+
+    for tx in transactions:
+        quantity = tx.quantity_in if tx.quantity_in else tx.quantity_out
+        tx.subtotal = quantity * tx.unit_price if quantity and tx.unit_price else 0
+
+    seed_names = SeedTransaction.objects.select_related('seed') \
+        .values_list('seed__name', flat=True).distinct().order_by('seed__name')
+
+    context = {
+        'transactions': transactions,
+        'seed_names': seed_names,
+        'title': 'Movimientos de Semillas'
+    }
+    return render(request, 'inventory/seed_movements.html', context)

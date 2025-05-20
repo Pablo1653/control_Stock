@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Movimiento de Semillas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" rel="stylesheet" />
+</head>
+<body class="container py-4">
+
+<div class="text-center mb-4">
+    <h1 class="display-5">Movimiento de Semillas</h1>
+</div>
+
+<div class="mb-3">
+    <label for="seedFilter" class="form-label"><strong>Filtrar por semilla:</strong></label>
+    <select id="seedFilter" class="form-select" style="max-width: 300px;">
+        <option value="">Todos</option>
+        {% for name in seed_names %}
+            <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="mb-3">
+    <strong>Cantidad Total:</strong> <span id="totalQuantity">0</span><br>
+    <strong>Total USD:</strong> <span id="totalUSD">0.00</span>
+</div>
+
+<table id="transactionsTable" class="table table-striped table-bordered" style="width:100%">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Tipo</th>
+            <th>Cantidad</th>
+            <th>Precio Unitario</th>
+            <th>Subtotal</th>
+            <th>N° Remito</th>
+            <th>Usuario</th>
+            <th>Fecha</th>
+            <th>Observaciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tx in transactions %}
+        <tr>
+            <td>{{ tx.seed.name }}</td>
+            <td>{% if tx.quantity_in %}Entrada{% elif tx.quantity_out %}Salida{% else %}-{% endif %}</td>
+            <td class="quantity">{{ tx.quantity_in|default:tx.quantity_out }}</td>
+            <td class="unit-price">{{ tx.unit_price|floatformat:2 }}</td>
+            <td class="subtotal">{{ tx.subtotal|floatformat:2 }}</td>
+            <td>{{ tx.receipt_number }}</td>
+            <td>{{ tx.created_by_email }}</td>
+            <td>{{ tx.created_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ tx.observations }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'inventory_list' %}" class="btn btn-secondary mt-3">Volver al menú</a>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<script>
+    $(document).ready(function() {
+        const table = $('#transactionsTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'excelHtml5', title: 'Movimientos de Semillas', text: 'Exportar a Excel', className: 'btn btn-success' },
+                { extend: 'pdfHtml5', title: 'Movimientos de Semillas', text: 'Exportar a PDF', orientation: 'landscape', pageSize: 'A4', className: 'btn btn-danger' },
+                { extend: 'print', text: 'Imprimir', className: 'btn btn-primary' }
+            ],
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.5/i18n/es-ES.json' }
+        });
+
+        // Actualiza totales según filtro y búsqueda
+        function updateTotals() {
+            let totalQuantity = 0, totalUSD = 0;
+            table.rows({ search: 'applied' }).every(function () {
+                const $row = $(this.node());
+                const quantity = parseFloat($row.find('.quantity').text()) || 0;
+                const subtotal = parseFloat($row.find('.subtotal').text()) || 0;
+                totalQuantity += quantity;
+                totalUSD += subtotal;
+            });
+            $('#totalQuantity').text(totalQuantity.toFixed(2));
+            $('#totalUSD').text(totalUSD.toFixed(2));
+        }
+
+        table.on('draw', updateTotals);
+        updateTotals();
+
+        // Filtro por semilla
+        $('#seedFilter').on('change', function() {
+            const selected = $(this).val();
+            table.column(0).search(selected).draw();
+        });
+    });
+</script>
+
+</body>
+</html>

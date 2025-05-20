@@ -28,23 +28,54 @@
 
         <h1 class="text-center mb-4">Inventario de Fitosanitarios, Combustibles y Semillas</h1>
 
-        <!-- Botones para agregar productos y transacciones -->
-        <div class="mb-4">
-            <a href="{% url 'create_pesticide' %}" class="btn btn-primary">Agregar Fitosanitario</a>
-            <a href="{% url 'create_fuel' %}" class="btn btn-primary">Agregar Combustible</a>
-            <a href="{% url 'create_seed' %}" class="btn btn-primary">Agregar Semilla</a>
-            <a href="{% url 'add_pesticide' %}" class="btn btn-secondary">Modificar Fitosanitario</a>
-            <a href="{% url 'add_fuel' %}" class="btn btn-secondary">Modificar Combustible</a>
-            <a href="{% url 'add_seed' %}" class="btn btn-secondary">Modificar Semilla</a>
+        <!-- Botones agrupados en dropdowns -->
+        <div class="mb-4 d-flex gap-3 justify-content-center flex-wrap">
+
+            <!-- Dropdown Altas -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Altas
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'create_pesticide' %}">Alta Fitosanitario</a></li>
+                    <li><a class="dropdown-item" href="{% url 'create_fuel' %}">Alta Combustible</a></li>
+                    <li><a class="dropdown-item" href="{% url 'create_seed' %}">Alta Semilla</a></li>
+                </ul>
+            </div>
+
+            <!-- Dropdown Movimientos -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Movimientos
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'add_pesticide' %}">Movimiento Fitosanitario</a></li>
+                    <li><a class="dropdown-item" href="{% url 'add_fuel' %}">Movimiento Combustible</a></li>
+                    <li><a class="dropdown-item" href="{% url 'add_seed' %}">Movimiento Semilla</a></li>
+                </ul>
+            </div>
+
+            <!-- Dropdown Listas -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Listas
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'pesticide_movements' %}">Lista de Fitosanitarios</a></li>
+                    <li><a class="dropdown-item" href="{% url 'fuel_movements' %}">Lista de Combustibles</a></li>
+                    <li><a class="dropdown-item" href="{% url 'seed_movements' %}">Lista de Semillas</a></li>
+                </ul>
+            </div>
+
         </div>
 
         <!-- Subtotales y totales -->
         <h2>Totales</h2>
-        <p><strong>Total valor de Fitosanitarios (USD):</strong> {{ total_value_pesticide_usd }}</p>
-        <p><strong>Total costo de Combustibles (pesos):</strong> {{ total_cost_fuel_usd }}</p>
-        <p><strong>Total valor de Semillas (USD):</strong> {{ total_value_seed_usd }}</p>
+       <p><strong>Total valor de Fitosanitarios (USD):</strong> {{ total_pesticides }}</p>
+       <p><strong>Total costo de Combustibles (pesos):</strong> {{ total_fuels }}</p>
+       <p><strong>Total valor de Semillas (USD):</strong> {{ total_seeds }}</p>
 
-        <!-- Tabla de Pesticidas -->
+        <!-- Tablas (sin cambios) -->
         <div class="mt-4">
             <h3>Fitosanitarios</h3>
             <div class="table-responsive">
@@ -83,7 +114,6 @@
             </div>
         </div>
 
-        <!-- Tabla de Combustibles -->
         <div class="mt-4">
             <h3>Combustibles</h3>
             <div class="table-responsive">
@@ -118,7 +148,6 @@
             </div>
         </div>
 
-        <!-- Tabla de Semillas -->
         <div class="mt-4">
             <h3>Semillas</h3>
             <div class="table-responsive">

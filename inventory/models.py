@@ -68,6 +68,7 @@ class Transaction(models.Model):
     receipt_number = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by_email = models.EmailField(max_length=254)
 
     class Meta:
         abstract = True
@@ -82,6 +83,7 @@ class Transaction(models.Model):
 class PesticideTransaction(Transaction):
     pesticide = models.ForeignKey(Pesticide, on_delete=models.CASCADE)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_by_email = models.EmailField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -112,7 +114,8 @@ class PesticideTransaction(Transaction):
             super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.pesticide.name}: {'Entrada' if self.quantity_in else 'Salida'}"
+        return f"{self.pesticide.name}: {'Entrada' if self.quantity_in else 'Salida'} - Usuario: {self.created_by_email}"
+    
 
 class FuelTransaction(Transaction):
     fuel = models.ForeignKey(Fuel, on_delete=models.CASCADE)
@@ -147,7 +150,7 @@ class FuelTransaction(Transaction):
             super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.fuel.name}: {'Entrada' if self.quantity_in else 'Salida'}"
+        return f"{self.fuel.name}: {'Entrada' if self.quantity_in else 'Salida'} - Usuario: {self.created_by_email}"
 
 class SeedTransaction(Transaction):
     seed = models.ForeignKey(Seed, on_delete=models.CASCADE)
@@ -182,4 +185,4 @@ class SeedTransaction(Transaction):
             super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.seed.name}: {'Entrada' if self.quantity_in else 'Salida'}"
+        return f"{self.seed.name}: {'Entrada' if self.quantity_in else 'Salida'} - Usuario: {self.created_by_email}"
