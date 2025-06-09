@@ -188,17 +188,29 @@ class PesticideTransactionForm(forms.ModelForm):
         # Ahora llamamos a super()._post_clean() para que se apliquen las validaciones
         super()._post_clean()
         
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        
-        # Para salidas, tomamos el precio unitario del pesticida
-        if self.cleaned_data.get('transaction_type') == 'out':
-            instance.unit_price = instance.pesticide.unit_price
-        
-        if commit:
-            instance.save()
-        
-        return instance
+def save(self, commit=True):
+    instance = super().save(commit=False)
+
+    transaction_type = self.cleaned_data.get('transaction_type')
+    quantity = self.cleaned_data.get('quantity')
+
+    if transaction_type == 'in':
+        instance.quantity_in = quantity
+        instance.quantity_out = 0
+        # El unit_price ya fue ingresado por el usuario
+    elif transaction_type == 'out':
+        instance.quantity_in = 0
+        instance.quantity_out = quantity
+        # Asignar el precio actual del producto
+        instance.unit_price = instance.pesticide.unit_price
+
+    # Calcular el subtotal de la transacción
+    instance.subtotal = instance.unit_price * quantity
+
+    if commit:
+        instance.save()
+
+    return instance
     
     
 

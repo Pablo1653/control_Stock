@@ -83,7 +83,7 @@ class Transaction(models.Model):
 class PesticideTransaction(Transaction):
     pesticide = models.ForeignKey(Pesticide, on_delete=models.CASCADE)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    created_by_email = models.EmailField(null=True, blank=True)
+   
 
     def save(self, *args, **kwargs):
         self.clean()

@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import F
+
 from .models import Pesticide, Fuel, Seed, PesticideTransaction, FuelTransaction, SeedTransaction
 from .forms import (
     PesticideForm, FuelForm, SeedForm,
@@ -92,6 +93,7 @@ def create_seed(request):
         form = SeedForm()
     return render(request, 'inventory/create_seed.html', {'form': form})
 
+
 def add_pesticide(request):
     if request.method == 'POST':
         form = PesticideTransactionForm(request.POST)
@@ -105,9 +107,18 @@ def add_pesticide(request):
             try:
                 print("DEBUG: Intentando guardar formulario")
                 transaction = form.save(commit=False)
-                transaction.created_by_email = request.user.email if request.user.is_authenticated else 'anónimo'
+                
+                # Asegurar que se guarde el email del usuario actual
+                #if request.user.is_authenticated:
+                #    transaction.created_by_email = request.user.email
+                #else:
+                #    # Si no hay usuario autenticado, podemos usar un valor predeterminado o mostrar un error
+                #    messages.error(request, 'Debe iniciar sesión para realizar esta operación.')
+                #    return redirect('login')  # Asegúrate de tener una URL con nombre 'login'
+                
                 transaction.save()
                 print("DEBUG: Guardado exitoso, ID:", transaction.id)
+                print("DEBUG: Email registrado:", transaction.created_by_email)
                 
                 # Mensaje más informativo según el tipo de transacción
                 if transaction.quantity_in > 0:
@@ -145,6 +156,7 @@ def add_pesticide(request):
     
     return render(request, 'inventory/add_pesticide.html', {'form': form})
 
+
 def add_fuel(request):
     if request.method == 'POST':
         form = FuelTransactionForm(request.POST)
@@ -157,9 +169,20 @@ def add_fuel(request):
         if form.is_valid():
             try:
                 print("DEBUG: Intentando guardar formulario")
-                transaction = form.save()
-                print("DEBUG: Guardado exitoso, ID:", transaction.id)
+                transaction = form.save(commit=False)
+                # Asegurar que se guarde el email del usuario actual
+                #if request.user.is_authenticated:
+                #    transaction.created_by_email = request.user.email
+                #else:
+                #    # Si no hay usuario autenticado, podemos usar un valor predeterminado o mostrar un error
+                #    messages.error(request, 'Debe iniciar sesión para realizar esta operación.')
+                #    return redirect('login')  # Asegúrate de tener una URL con nombre 'login'
                 
+                #transaction.save()
+                #print("DEBUG: Guardado exitoso, ID:", transaction.id)
+                #print("DEBUG: Email registrado:", transaction.created_by_email)
+
+
                 # Mensaje más informativo según el tipo de transacción
                 if transaction.quantity_in > 0:
                     messages.success(
@@ -196,6 +219,7 @@ def add_fuel(request):
     
     return render(request, 'inventory/add_fuel.html', {'form': form})
 
+
 def add_seed(request):
     if request.method == 'POST':
         form = SeedTransactionForm(request.POST)
@@ -208,8 +232,18 @@ def add_seed(request):
         if form.is_valid():
             try:
                 print("DEBUG: Intentando guardar formulario")
-                transaction = form.save()
-                print("DEBUG: Guardado exitoso, ID:", transaction.id)
+                transaction = form.save(commit=False)
+                # Asegurar que se guarde el email del usuario actual
+                #if request.user.is_authenticated:
+                #    transaction.created_by_email = request.user.email
+                #else:
+                #    # Si no hay usuario autenticado, podemos usar un valor predeterminado o mostrar un error
+                #    messages.error(request, 'Debe iniciar sesión para realizar esta operación.')
+                #    return redirect('login')  # Asegúrate de tener una URL con nombre 'login'
+                
+                # transaction.save()
+                #print("DEBUG: Guardado exitoso, ID:", transaction.id)
+                #print("DEBUG: Email registrado:", transaction.created_by_email)
                 
                 # Mensaje más informativo según el tipo de transacción
                 if transaction.quantity_in > 0:
@@ -250,17 +284,34 @@ def add_seed(request):
 def pesticide_movements(request):
     transactions = PesticideTransaction.objects.select_related('pesticide').order_by('-created_at')
 
+    # Calcular la cantidad total considerando entradas y salidas
+    total_quantity = 0
+    
+    # Obtener todos los pesticidas para calcular el valor total actual
+    pesticides = Pesticide.objects.all()
+    total_usd = 0
+    
+    # Calcular el total de la misma manera que en inventory_list
+    for p in pesticides:
+        if p.unit_price is not None and p.available_quantity is not None:
+            subtotal = p.unit_price * p.available_quantity
+            total_usd += subtotal
+            total_quantity += p.available_quantity
+
+    # Preparar subtotales para mostrar en la tabla de transacciones
     for tx in transactions:
         quantity = tx.quantity_in if tx.quantity_in else tx.quantity_out
         tx.subtotal = quantity * tx.unit_price if quantity and tx.unit_price else 0
-
-    # ✅ Agregá esta línea para obtener los nombres únicos de pesticidas
+    
     pesticide_names = PesticideTransaction.objects.select_related('pesticide') \
         .values_list('pesticide__name', flat=True).distinct().order_by('pesticide__name')
-
+    
     context = {
         'transactions': transactions,
-        'pesticide_names': pesticide_names,  # ✅ esto es lo que faltaba
+        'pesticide_names': pesticide_names,
+        'title': 'Movimientos de Fitosanitarios',
+        'total_quantity': total_quantity,
+        'total_usd': total_usd
     }
     return render(request, 'inventory/pesticide_movements.html', context)
 
@@ -269,6 +320,21 @@ def pesticide_movements(request):
 def fuel_movements(request):
     transactions = FuelTransaction.objects.select_related('fuel').order_by('-created_at')
 
+    # Calcular la cantidad total considerando entradas y salidas
+    total_quantity = 0
+    
+    # Obtener todos los combustibles para calcular el valor total actual
+    fuels = Fuel.objects.all()
+    total_usd = 0
+    
+    # Calcular el total de la misma manera que en inventory_list
+    for f in fuels:
+        if f.unit_price is not None and f.available_quantity is not None:
+            subtotal = f.unit_price * f.available_quantity
+            total_usd += subtotal
+            total_quantity += f.available_quantity
+
+    # Preparar subtotales para mostrar en la tabla de transacciones
     for tx in transactions:
         quantity = tx.quantity_in if tx.quantity_in else tx.quantity_out
         tx.subtotal = quantity * tx.unit_price if quantity and tx.unit_price else 0
@@ -279,7 +345,9 @@ def fuel_movements(request):
     context = {
         'transactions': transactions,
         'fuel_names': fuel_names,
-        'title': 'Movimientos de Combustibles'
+        'title': 'Movimientos de Combustibles',
+        'total_quantity': total_quantity,
+        'total_usd': total_usd
     }
     return render(request, 'inventory/fuel_movements.html', context)
 
@@ -287,6 +355,21 @@ def fuel_movements(request):
 def seed_movements(request):
     transactions = SeedTransaction.objects.select_related('seed').order_by('-created_at')
 
+    # Calcular la cantidad total considerando entradas y salidas
+    total_quantity = 0
+    
+    # Obtener todas las semillas para calcular el valor total actual
+    seeds = Seed.objects.all()
+    total_usd = 0
+    
+    # Calcular el total de la misma manera que en inventory_list
+    for s in seeds:
+        if s.unit_price is not None and s.available_quantity is not None:
+            subtotal = s.unit_price * s.available_quantity
+            total_usd += subtotal
+            total_quantity += s.available_quantity
+
+    # Preparar subtotales para mostrar en la tabla de transacciones
     for tx in transactions:
         quantity = tx.quantity_in if tx.quantity_in else tx.quantity_out
         tx.subtotal = quantity * tx.unit_price if quantity and tx.unit_price else 0
@@ -297,6 +380,8 @@ def seed_movements(request):
     context = {
         'transactions': transactions,
         'seed_names': seed_names,
-        'title': 'Movimientos de Semillas'
+        'title': 'Movimientos de Semillas',
+        'total_quantity': total_quantity,
+        'total_usd': total_usd
     }
     return render(request, 'inventory/seed_movements.html', context)
